@@ -8,12 +8,13 @@ class Playground {
 		const scene = new BABYLON.Scene(engine);
 
 		// Visualizer parameters
-		const numOfBars = 256;
-		const barWidth = 5;
-		const totalLength = numOfBars * barWidth;
-		const startX = -totalLength / 2;
+		const numOfBars = 256; // Adjust as needed for performance
+		const barWidth = 1;
+		const barDepth = 1;
+		const barSpacing = 0.2;
+		const totalLength = numOfBars * (barWidth + barSpacing);
+		const startX = -totalLength / 2 + (barWidth + barSpacing) / 2;
 
-		// Create a camera that centers the visualizer on the screen
 		// Create a UniversalCamera positioned to center the visualizer
 		const camera = new BABYLON.UniversalCamera(
 			"Camera",
@@ -27,29 +28,25 @@ class Playground {
 		// Attach the camera to the canvas
 		camera.attachControl(canvas, true);
 
-		// Generate points along the x-axis centered around the origin
-		const analyzerPoints = [];
-		for (let i = 0; i < numOfBars; i++) {
-			const x = startX + i * barWidth;
-			analyzerPoints.push(new BABYLON.Vector3(x, 0, 0));
-		}
+		// Create an array to hold the bar meshes
+		const bars = [];
 
-		// Create the GreasedLine Mesh for the analyzer line
-		const analyzerLine = BABYLON.CreateGreasedLine(
-			"analyzer-line",
-			{
-				points: analyzerPoints,
-				updatable: true,
-			},
-			{
-				sizeAttenuation: false,
-				useDash: true,
-				dashCount: numOfBars,
-				dashRatio: 0.4,
-				color: new BABYLON.Color3(1, 0, 0),
-			},
-			scene
-		);
+		// Generate bars along the x-axis centered around the origin
+		for (let i = 0; i < numOfBars; i++) {
+			const x = startX + i * (barWidth + barSpacing);
+
+			// Create a box (bar) for each frequency
+			const bar = BABYLON.MeshBuilder.CreateBox(
+				`bar${i}`,
+				{ width: barWidth, depth: barDepth, height: 1 },
+				scene
+			);
+			bar.position.x = x;
+			bar.position.y = 0.5; // Initial height is 1, so y is half of that
+
+			// Add the bar to the array
+			bars.push(bar);
+		}
 
 		// Start audio playback and create the audio analyzer
 		_startAudio();
@@ -72,27 +69,26 @@ class Playground {
 			if (BABYLON.Engine.audioEngine) {
 				const analyser = new BABYLON.Analyser(scene);
 				BABYLON.Engine.audioEngine.connectToAnalyser(analyser);
-				analyser.BARGRAPHAMPLITUDE = 256;
-				analyser.FFT_SIZE = 512;
+				analyser.FFT_SIZE = 512; // Must be a power of two
 				analyser.SMOOTHING = 0.7;
-
-				const frequencyAdjustment = 10;
 
 				scene.onBeforeRenderObservable.add(() => {
 					const frequencies = analyser.getByteFrequencyData();
-					const widths = [];
+					const minHeight = 0.1;
+					const maxHeight = 70;
 
 					for (let i = 0; i < numOfBars; i++) {
 						const f = frequencies[i];
-						const normalizedFrequency = f * frequencyAdjustment;
-						widths.push(Math.max(normalizedFrequency, 1)); // Ensure minimum width
-					}
+						const normalizedFrequency = f / 255; // Normalize between 0 and 1
 
-					analyzerLine.widths = widths;
+						// Calculate new height
+						const newHeight =
+							minHeight + normalizedFrequency * (maxHeight - minHeight);
 
-					// Update the line after changing widths
-					if (analyzerLine.update) {
-						analyzerLine.update();
+						// Update the bar's scaling and position
+						const bar = bars[i];
+						bar.scaling.y = newHeight;
+						bar.position.y = newHeight / 2; // Adjust position so the bar scales from the bottom
 					}
 				});
 			} else {
