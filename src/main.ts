@@ -1,7 +1,7 @@
 import { Playground } from './createScene';
 import { Playground2 } from './example2Scene';
 import './style.css';
-import { Engine } from 'babylonjs';
+import { Engine } from '@babylonjs/core';
 
 const main = () => {
   const renderCanvas = document.getElementById(
