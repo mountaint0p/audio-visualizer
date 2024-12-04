@@ -25,10 +25,15 @@ class Playground2 {
 
         // BEGIN generic custom sphere lighting
 
-    		// box mesh for use with our shader
+    		// directional light
+    		const lightDirection = new BABYLON.Vector3(-0.5, -1, 0.7);
+    		const light = new BABYLON.DirectionalLight("DirectionalLight", lightDirection, scene);
+    		light.diffuse = new BABYLON.Color3(1, 1, 1);
+    		light.specular = new BABYLON.Color3(1, 1, 1);
+
     		const genericSphere = BABYLON.MeshBuilder.CreateSphere("genericSphere", { diameter: 2 });
-    		genericSphere.position.y = 1;
-    		genericSphere.position.x = -1.5;
+    		genericSphere.position.y = 4;
+    		genericSphere.position.x = 4;
 
     		
     		const vertexShader = `
@@ -117,6 +122,7 @@ class Playground2 {
     		genericSphere.material = shaderMaterial;
 
         // TODO finish setting variables
+        const surfaceColor = BABYLON.Vector3.FromArray([1, 0, 0]);
     		function update() {
     			shaderMaterial.setVector3("surfaceColor", surfaceColor);
     			shaderMaterial.setVector3("lightDirection", light.direction);
