@@ -31,9 +31,8 @@ class Playground2 {
     		light.diffuse = new BABYLON.Color3(1, 1, 1);
     		light.specular = new BABYLON.Color3(1, 1, 1);
 
-    		const genericSphere = BABYLON.MeshBuilder.CreateSphere("genericSphere", { diameter: 2 });
-    		genericSphere.position.y = 4;
-    		genericSphere.position.x = 4;
+    		const genericSphere = BABYLON.MeshBuilder.CreateSphere("genericSphere", { diameter: 1 });
+    		genericSphere.position = new BABYLON.Vector3(2, 1, 0);
 
     		
     		const vertexShader = `
@@ -52,7 +51,7 @@ class Playground2 {
 						vec4 viewPosition	= view * worldPosition;
 						vec4 clipPosition	= projection * viewPosition;
 
-						worldNormal = world * normal;  // good enough!
+						worldNormal = mat3(world) * normal;  // good enough!
 						worldPos = worldPosition.xyz;
 
 						gl_Position = clipPosition;
