@@ -23,6 +23,114 @@ class Playground2 {
         );
         camera.attachControl(canvas, true);
 
+        // BEGIN generic custom sphere lighting
+
+    		// box mesh for use with our shader
+    		const genericSphere = BABYLON.MeshBuilder.CreateSphere("genericSphere", { diameter: 2 });
+    		genericSphere.position.y = 1;
+    		genericSphere.position.x = -1.5;
+
+    		
+    		const vertexShader = `
+  				attribute vec3 position;
+  				attribute vec3 normal;
+  				uniform mat4 world;
+  				uniform mat4 view;
+  				uniform mat4 projection;
+
+  				varying vec3 worldPos;
+  				varying vec3 worldNormal;
+
+  				void main() {
+						vec4 localPosition = vec4(position, 1.);
+						vec4 worldPosition = world * localPosition;
+						vec4 viewPosition	= view * worldPosition;
+						vec4 clipPosition	= projection * viewPosition;
+
+						worldNormal = world * normal;  // good enough!
+						worldPos = worldPosition.xyz;
+
+						gl_Position = clipPosition;
+  				}
+    		`;
+
+    		const fragmentShader = `
+  				uniform vec3 surfaceColor;
+  				uniform vec3 lightDirection;
+  				uniform float lightIntensity;
+  				uniform vec3 lightColor;
+  				uniform vec3 viewPosition;
+  				uniform float shininess;
+  				uniform float ambientTerm;
+  				uniform vec3 specularColor;
+
+  				varying vec3 worldNormal;
+  				varying vec3 worldPos;
+
+  				void main() {
+  						vec3 normalizedLightDirection = normalize(lightDirection);
+  						vec3 normalizedNormal = normalize(worldNormal);
+  						vec3 normalizedViewDirection = normalize(viewPosition-worldPos);
+
+  						// ambient color
+  						vec3 ambientColor = ambientTerm * lightColor;
+
+  						vec3 totalColor = ambientColor;
+  						float cosineTheta = dot(normalizedNormal, -1.0 * normalizedLightDirection);
+  						// only consider diffuse and specular when cos(theta) > 0.0
+  						if (cosineTheta > 0.0) {
+  							// diffuse
+  							float intensity = cosineTheta * lightIntensity;
+  							vec3 diffuseColor = intensity * (surfaceColor * lightColor);
+  							// specular
+  							vec3 halfVector = normalize(-1.0 * normalizedLightDirection + normalizedViewDirection);
+  							float cosinePhi = dot(halfVector, normalizedNormal);
+  							float shinyPower = pow(cosinePhi, shininess);
+  							vec3 specularColorShown = shinyPower * specularColor;
+
+  							totalColor = totalColor + diffuseColor + specularColorShown;
+  						}
+  						gl_FragColor = vec4(totalColor,1);
+  				}
+    		`;
+
+    		
+    		const shaderMaterial = new BABYLON.ShaderMaterial('genericShader', scene, {
+    			// assign source code for vertex and fragment shader (string)
+    			vertexSource: vertexShader,
+    			fragmentSource: fragmentShader
+    		},
+    			{
+    				// assign shader inputs
+    				attributes: ["position", "normal"],
+    				// TODO: do we need to make our own world/view/proj matrices?
+    				// if so, see lab06
+    				uniforms: ["world", "view", "projection",
+    					"inverseTranspose", "surfaceColor",
+    					"lightDirection", "lightIntensity", 
+    					"viewPosition", "shininess", "ambientTerm",
+    					"specularColor",
+    				  // TODO more stuff to be set
+    				]
+    			});
+
+    		genericSphere.material = shaderMaterial;
+
+        // TODO finish setting variables
+    		function update() {
+    			shaderMaterial.setVector3("surfaceColor", surfaceColor);
+    			shaderMaterial.setVector3("lightDirection", light.direction);
+    			shaderMaterial.setFloat("lightIntensity", light.intensity);
+    			shaderMaterial.setColor3("lightColor", light.diffuse);
+    			shaderMaterial.setColor3("specularColor", light.specular)
+    			shaderMaterial.setVector3("viewPosition", camera.position);
+    			shaderMaterial.setFloat("shininess", 50.0)
+    			shaderMaterial.setFloat("ambientTerm", 0.1)
+    		}
+    		scene.registerBeforeRender(update);
+
+        // END generic custom sphere lighting
+
         // **Sphere Setup**
         const sphere = BABYLON.MeshBuilder.CreateSphere("sphere", { diameter: 1, segments: 32 }, scene);
         sphere.position = new BABYLON.Vector3(0, 1, 0);
